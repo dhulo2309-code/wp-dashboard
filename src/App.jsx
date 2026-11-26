@@ -8,6 +8,34 @@ const dc = d => d == null ? '' : d < 14 ? 'bd' : d < 30 ? 'warn' : 'ok'
 const Y = ({ t, v }) => <div className="row"><span>{t}</span><b className={v ? 'ok' : 'bd'}>{v ? '✓' : '✗'}</b></div>
 const cat = i => /PageSpeed|response|TTFB/i.test(i) ? 'Speed' : /SEO|robots|sitemap|noindex/i.test(i) ? 'SEO' : /Security headers|admin|XML-RPC|WP_DEBUG/i.test(i) ? 'Security' : /down|SSL|Domain|broken/i.test(i) ? 'Uptime, SSL and domain' : 'WordPress'
 const goBox = t => document.getElementById('box-' + t.replace(/\W+/g, ''))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+const HT = 'Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"\nHeader always set X-Content-Type-Options "nosniff"\nHeader always set X-Frame-Options "SAMEORIGIN"'
+const FIX = [
+  { t: /Site down/, title: 'Your site is not loading', steps: ['Click Check now once more, it may have been a short glitch.', 'Check your hosting panel for an outage, expired plan or resource limit.', 'Read the error log (hosting panel or wp-content/debug.log) to see the exact error.', 'If it began after an update, rename wp-content/plugins to plugins_off via FTP, then re-enable plugins one by one.', 'Still down? Contact hosting support and share the HTTP code from the issue.'] },
+  { t: /Slow response|High TTFB/, title: 'Server is responding slowly', steps: ['Install a cache plugin (LiteSpeed Cache, WP Rocket or W3 Total Cache) and turn on page caching.', 'Switch PHP to 8.2 or newer in your hosting panel.', 'Deactivate heavy plugins you do not need.', 'Put the site behind a CDN such as Cloudflare.', 'If it is still slow, the hosting plan may be too small.'], action: 'clear_cache', label: 'Clear cache now' },
+  { t: /SSL expires/, title: 'SSL certificate is about to expire', steps: ['Open your hosting panel (cPanel: SSL/TLS Status) and run AutoSSL / renew the certificate.', 'If you use Cloudflare or a paid SSL, renew it there.', 'Turn on auto-renewal so it does not happen again.', 'Click Check now to confirm the new expiry date.'] },
+  { t: /Domain expires/, title: 'Domain is about to expire', steps: ['Log in to the registrar where you bought the domain.', 'Renew it for at least 1 more year.', 'Turn on auto-renew and make sure the payment card is valid.'] },
+  { t: /Low PageSpeed/, title: 'Mobile speed score is low', steps: ['Compress images and convert them to WebP (Imagify or ShortPixel).', 'Enable caching plus CSS/JS minify and defer (LiteSpeed Cache or WP Rocket).', 'Turn on lazy loading for images and videos.', 'Remove unused plugins and heavy page-builder widgets.', 'Use a lightweight theme if the score stays low.'], action: 'clear_cache', label: 'Clear cache now' },
+  { t: /noindex/, title: 'Google is told not to index this site', steps: ['WP Admin > Settings > Reading: untick "Discourage search engines from indexing this site".', 'Check your SEO plugin (Yoast or Rank Math) for a noindex setting on the homepage.', 'Clear the cache, then click Check now.'], action: 'clear_cache', label: 'Clear cache now' },
+  { t: /missing title/, title: 'Homepage has no title tag', steps: ['Install Yoast SEO or Rank Math and set an SEO title for the homepage.', 'If your theme has no title support, add add_theme_support("title-tag") in functions.php.', 'Keep it under 60 characters and include the main keyword.'] },
+  { t: /missing meta description/, title: 'Homepage has no meta description', steps: ['Open Yoast SEO or Rank Math and edit the homepage SEO settings.', 'Write a description of 120 to 160 characters.', 'Clear the cache and click Check now.'] },
+  { t: /H1 tags/, title: 'Homepage should have exactly one H1', steps: ['Edit the homepage and find all Heading 1 blocks.', 'If there are none, make your main headline an H1.', 'If there are several, change the extra ones to H2 or H3.', 'Also check theme or widget headings (logo or site title is often an extra H1).'] },
+  { t: /robots\.txt/, title: 'robots.txt is missing', steps: ['In Yoast SEO: Tools > File editor to create robots.txt, or Rank Math: General Settings > Edit robots.txt.', 'Or create a robots.txt file in the site root with these lines: User-agent: * and Allow: /', 'Open yoursite.com/robots.txt to confirm it loads.'] },
+  { t: /sitemap\.xml/, title: 'sitemap.xml is missing', steps: ['Turn on the XML sitemap in Yoast SEO or Rank Math.', 'Your sitemap may live at /sitemap_index.xml or /wp-sitemap.xml. Add a redirect from /sitemap.xml to it (Redirection plugin).', 'Submit the sitemap in Google Search Console.'] },
+  { t: /broken link/, title: 'Some links on the homepage return 404 or errors', steps: ['Install Broken Link Checker (or run Screaming Frog) to find the exact links.', 'Fix the URL, remove the link, or add a 301 redirect with the Redirection plugin.', 'Click Check now to confirm.'] },
+  { t: /Security headers/, title: 'Security headers are missing', steps: ['Easiest: install the plugin "Headers Security Advanced & HSTS WP" and enable the headers.', 'Or add these lines to .htaccess (Apache servers) after the site works fully on HTTPS:', 'On Cloudflare, you can add the same headers under Rules > Transform Rules.'], code: HT },
+  { t: /core update/, title: 'WordPress core update is available', steps: ['Take a full backup first.', 'WP Admin > Dashboard > Updates > Update now.', 'Open the site and check that it still works.'] },
+  { t: /plugin update/, title: 'Plugins need updating', steps: ['Take a full backup first.', 'WP Admin > Plugins: update them, ideally one by one.', 'Check the site after each important plugin.', 'Delete plugins you do not use.'] },
+  { t: /theme update/, title: 'Theme needs updating', steps: ['Take a full backup first.', 'WP Admin > Appearance > Themes: update the theme.', 'If you edited the theme files directly, move those changes to a child theme first.'] },
+  { t: /Autoload/, title: 'Too much data loads on every page', steps: ['Run Clean DB to remove expired transients.', 'Find big autoloaded options with Query Monitor or Advanced Database Cleaner.', 'Delete options left behind by plugins you removed.', 'Click Check now to see the new size.'], action: 'cleanup_db', label: 'Run Clean DB now' },
+  { t: /error log/, title: 'PHP error log keeps growing', steps: ['Download wp-content/debug.log and read the most repeated errors.', 'Fix or update the plugin or theme that causes them.', 'Delete the log file after fixing.', 'Turn off WP_DEBUG_LOG in wp-config.php.'] },
+  { t: /outdated/, title: 'PHP version is old', steps: ['Take a backup.', 'Hosting panel (cPanel: Select PHP Version): switch to PHP 8.2 or 8.3.', 'Open the site and admin and check for errors. If something breaks, switch back and update that plugin.'] },
+  { t: /WP_DEBUG/, title: 'Debug mode is on in production', steps: ['Open wp-config.php through FTP or File Manager.', 'Set the lines shown below, then save.'], code: "define('WP_DEBUG', false);\ndefine('WP_DEBUG_LOG', false);\ndefine('WP_DEBUG_DISPLAY', false);" },
+  { t: /Username "admin"/, title: 'The "admin" username is easy to guess', steps: ['Users > Add New: create a new Administrator with a different username and a strong password.', 'Log in with the new user.', 'Delete the "admin" user and assign its content to the new user.'] },
+  { t: /XML-RPC/, title: 'XML-RPC is a common attack target', steps: ['Install the plugin "Disable XML-RPC", or add the line below to a small custom plugin.', 'Do not disable it if you use the Jetpack or the mobile app.'], code: "add_filter('xmlrpc_enabled', '__return_false');" },
+  { t: /inactive plugin/, title: 'Unused plugins are still installed', steps: ['WP Admin > Plugins > Inactive.', 'Delete every plugin you do not need (not just deactivate).'] },
+  { t: /connector not reachable/, title: 'Dashboard cannot reach the WP connector', steps: ['Check that the wpdash connector plugin is active.', 'Check that the key in wp-config.php matches the key saved for this site.', 'Settings > Permalinks > Save to refresh REST routes.', 'If you use Wordfence, Cloudflare or a "disable REST API" plugin, allow /wp-json/wpdash/.'] },
+]
+const fixFor = i => FIX.find(f => f.t.test(i)) || { title: 'Review this issue', steps: ['Open the related box below and check the red items.', 'Fix them, then click Check now.'] }
 const IC = { Speed: '⚡', 'Uptime, SSL and domain': '🔒', WordPress: '🧩', SEO: '🔎', Security: '🛡️' }
 const Box = ({ t, cls = '', children }) => <div id={'box-' + t.replace(/\W+/g, '')} className={`card ${cls}`}><h4>{IC[t] || '⚠️'} {t}</h4>{children}</div>
 
@@ -21,7 +49,7 @@ function Login() {
 }
 
 function Detail({ site, onBack, reload }) {
-  const [rows, setRows] = useState([]), [busy, setBusy] = useState('')
+  const [rows, setRows] = useState([]), [busy, setBusy] = useState(''), [open, setOpen] = useState(null)
   const load = useCallback(async () => {
     const { data } = await supabase.from('checks').select('*').eq('site_id', site.id).order('checked_at', { ascending: false }).limit(30)
     setRows(data || [])
@@ -40,7 +68,18 @@ function Detail({ site, onBack, reload }) {
     <button className="d" onClick={remove}>Delete</button>
     {c && <div className="grid" style={{ marginTop: 16 }}>
       <Box t={`Issues (${c.issues.length})`} cls={c.issues.length ? 'mid' : 'good'}>
-        {c.issues.length ? c.issues.map(i => <div key={i} className="iss">⚠ {i} <a onClick={() => goBox(cat(i))} style={{ marginLeft: 6, textDecoration: 'underline' }}>→ {cat(i)}</a></div>) : <div className="ok">All good ✓</div>}</Box>
+        {c.issues.length ? c.issues.map(i => { const f = fixFor(i), o = open === i; return <div key={i}>
+          <div className="iss" style={{ cursor: 'pointer' }} onClick={() => setOpen(o ? null : i)}>⚠ {i} <b style={{ float: 'right' }}>{o ? '▲' : 'How to fix ▼'}</b></div>
+          {o && <div style={{ background: 'var(--card)', border: '1px solid var(--mdbd)', borderRadius: 8, padding: '10px 14px', margin: '4px 0 8px', fontSize: 13, color: 'var(--tx)' }}>
+            <b>{f.title}</b>
+            <ol style={{ paddingLeft: 18, margin: '8px 0' }}>{f.steps.map(x => <li key={x} style={{ marginBottom: 4 }}>{x}</li>)}</ol>
+            {f.code && <pre style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, padding: 10, overflowX: 'auto', fontSize: 12 }}>{f.code}</pre>}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {f.action && site.wp_key && <button disabled={!!busy} onClick={() => run('x', 'action', { action: f.action })}>{busy === 'x' ? 'Running…' : f.label}</button>}
+              <button className="g" onClick={() => goBox(cat(i))}>Show related box: {cat(i)}</button></div>
+            <div className="muted" style={{ marginTop: 8 }}>After fixing, click Check now to confirm the issue is gone.</div>
+          </div>}
+        </div> }) : <div className="ok">All good ✓</div>}</Box>
       <Box t="Speed" cls="good">
         <div className="row"><span>PageSpeed</span><span className={`pill ${sc(c.perf_score)}`}>{c.perf_score ?? '-'}</span></div>
         <div className="row"><span>LCP</span><span className={c.lcp_s > 4 ? 'bd' : c.lcp_s > 2.5 ? 'warn' : 'ok'}>{c.lcp_s != null ? Number(c.lcp_s).toFixed(1) + 's' : '-'}</span></div>
