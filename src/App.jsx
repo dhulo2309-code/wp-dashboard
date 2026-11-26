@@ -6,8 +6,10 @@ const lvl = c => !c ? 'none' : !c.up ? 'bad' : c.issues?.length ? 'mid' : 'good'
 const days = d => d ? Math.round((new Date(d) - Date.now()) / 864e5) : null
 const dc = d => d == null ? '' : d < 14 ? 'bd' : d < 30 ? 'warn' : 'ok'
 const Y = ({ t, v }) => <div className="row"><span>{t}</span><b className={v ? 'ok' : 'bd'}>{v ? '✓' : '✗'}</b></div>
+const cat = i => /PageSpeed|response|TTFB/i.test(i) ? 'Speed' : /SEO|robots|sitemap|noindex/i.test(i) ? 'SEO' : /Security headers|admin|XML-RPC|WP_DEBUG/i.test(i) ? 'Security' : /down|SSL|Domain|broken/i.test(i) ? 'Uptime, SSL and domain' : 'WordPress'
+const goBox = t => document.getElementById('box-' + t.replace(/\W+/g, ''))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 const IC = { Speed: '⚡', 'Uptime, SSL and domain': '🔒', WordPress: '🧩', SEO: '🔎', Security: '🛡️' }
-const Box = ({ t, cls = '', children }) => <div className={`card ${cls}`}><h4>{IC[t] || '⚠️'} {t}</h4>{children}</div>
+const Box = ({ t, cls = '', children }) => <div id={'box-' + t.replace(/\W+/g, '')} className={`card ${cls}`}><h4>{IC[t] || '⚠️'} {t}</h4>{children}</div>
 
 function Login() {
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [err, setErr] = useState('')
@@ -37,6 +39,8 @@ function Detail({ site, onBack, reload }) {
     <button className="g" disabled={!!busy} onClick={() => run('b', 'action', { action: 'cleanup_db' })}>Clean DB</button>{' '}
     <button className="d" onClick={remove}>Delete</button>
     {c && <div className="grid" style={{ marginTop: 16 }}>
+      <Box t={`Issues (${c.issues.length})`} cls={c.issues.length ? 'mid' : 'good'}>
+        {c.issues.length ? c.issues.map(i => <div key={i} className="iss">⚠ {i} <a onClick={() => goBox(cat(i))} style={{ marginLeft: 6, textDecoration: 'underline' }}>→ {cat(i)}</a></div>) : <div className="ok">All good ✓</div>}</Box>
       <Box t="Speed" cls="good">
         <div className="row"><span>PageSpeed</span><span className={`pill ${sc(c.perf_score)}`}>{c.perf_score ?? '-'}</span></div>
         <div className="row"><span>LCP</span><span className={c.lcp_s > 4 ? 'bd' : c.lcp_s > 2.5 ? 'warn' : 'ok'}>{c.lcp_s != null ? Number(c.lcp_s).toFixed(1) + 's' : '-'}</span></div>
@@ -63,8 +67,6 @@ function Detail({ site, onBack, reload }) {
       <Box t="Security">
         <Y t="HTTPS" v={sec.https} /><Y t="HSTS" v={sec.hsts} /><Y t="X-Content-Type-Options" v={sec.xcto} /><Y t="Clickjacking protection" v={sec.xfo} /><Y t="CSP" v={sec.csp} />
         {c.wp_version && <><Y t={'No "admin" username'} v={!w.admin_user} /><Y t="XML-RPC disabled" v={!w.xmlrpc} /><Y t="WP_DEBUG off" v={!w.wp_debug} /></>}</Box>
-      <Box t={`Issues (${c.issues.length})`} cls={c.issues.length ? 'mid' : 'good'}>
-        {c.issues.length ? c.issues.map(i => <div key={i} className="iss">⚠ {i}</div>) : <div className="ok">All good ✓</div>}</Box>
     </div>}
     <h3>History</h3><div className="card scroll"><table><thead><tr><th>Time</th><th>Status</th><th>Response</th><th>Score</th><th>Issues</th></tr></thead><tbody>
       {rows.map(r => <tr key={r.id}><td>{new Date(r.checked_at).toLocaleString()}</td><td><span className={`pill ${r.up ? 'good' : 'bad'}`}>{r.up ? 'Up' : 'Down'}</span></td><td>{r.response_ms}ms</td><td><span className={`pill ${sc(r.perf_score)}`}>{r.perf_score ?? '-'}</span></td><td>{r.issues.length}</td></tr>)}</tbody></table></div>
