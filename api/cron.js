@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const bad = rows.filter(r => !r.up || r.issues.some(i => /SSL|Domain|noindex/i.test(i)))
   if (bad.length && process.env.RESEND_KEY && process.env.ALERT_EMAIL)
     await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${process.env.RESEND_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: 'WP Dashboard <onboarding@resend.dev>', to: process.env.ALERT_EMAIL, subject: `${bad.length} site(s) ne dhyan joiye`,
+      body: JSON.stringify({ from: 'WP Dashboard <onboarding@resend.dev>', to: process.env.ALERT_EMAIL, subject: `${bad.length} site(s) need attention`,
         text: bad.map(r => `${name(r.site_id)}: ${r.issues.join('; ')}`).join('\n') }) }).catch(() => {})
   res.json({ checked: rows.length, alerts: bad.length })
 }
