@@ -37,7 +37,7 @@ export async function checkSite(site) {
   const ms = Date.now() - t
   const [ssl, p, wp, robots, sitemap, broken, dom] = await Promise.all([
     sslExpiry(host), psi(base),
-    site.wp_key ? fetch(`${base}/wp-json/wpdash/v1/status`, { headers: { 'x-wpdash-key': site.wp_key }, signal: AbortSignal.timeout(15000) }).then(r => r.json()).catch(() => { issues.push('WP connector reachable nathi'); return {} }) : {},
+    site.wp_key ? fetch(`${base}/wp-json/wpdash/v1/status`, { headers: { 'x-wpdash-key': site.wp_key }, signal: AbortSignal.timeout(15000) }).then(r => r.json()).catch(() => { issues.push('WP connector not reachable'); return {} }) : {},
     ok(`${base}/robots.txt`), ok(`${base}/sitemap.xml`), up ? brokenLinks(html, base) : 0, domExpiry(host)])
   const seo = { title: (html.match(/<title[^>]*>([^<]*)/i) || [])[1]?.trim() || null, desc: /<meta[^>]+name=["']description["']/i.test(html),
     h1: (html.match(/<h1[\s>]/gi) || []).length, noindex: /<meta[^>]+name=["']robots["'][^>]*noindex/i.test(html),
@@ -48,28 +48,28 @@ export async function checkSite(site) {
   if (!up) issues.push(`Site down (HTTP ${status})`)
   if (ms > 2500) issues.push(`Slow response: ${ms}ms`)
   if (ttfb > 800) issues.push(`High TTFB: ${ttfb}ms`)
-  if (days(ssl) !== null && days(ssl) < 14) issues.push('SSL 14 divas ma expire thase')
-  if (days(dom) !== null && days(dom) < 30) issues.push('Domain 30 divas ma expire thase')
+  if (days(ssl) !== null && days(ssl) < 14) issues.push('SSL expires in less than 14 days')
+  if (days(dom) !== null && days(dom) < 30) issues.push('Domain expires in less than 30 days')
   if (p.perf != null && p.perf < 50) issues.push(`Low PageSpeed score: ${p.perf}`)
   if (up) {
-    if (seo.noindex) issues.push('Site ma noindex che, Google ma nahi dekhay')
-    if (!seo.title) issues.push('SEO: title tag nathi')
-    if (!seo.desc) issues.push('SEO: meta description nathi')
-    if (seo.h1 !== 1) issues.push(`SEO: H1 count ${seo.h1} (1 joiye)`)
-    if (!robots) issues.push('robots.txt nathi'); if (!sitemap) issues.push('sitemap.xml nathi')
-    if (broken > 0) issues.push(`${broken} broken link(s) homepage par`)
+    if (seo.noindex) issues.push('Site has a noindex tag, hidden from Google')
+    if (!seo.title) issues.push('SEO: missing title tag')
+    if (!seo.desc) issues.push('SEO: missing meta description')
+    if (seo.h1 !== 1) issues.push(`SEO: ${seo.h1} H1 tags (should be 1)`)
+    if (!robots) issues.push('robots.txt missing'); if (!sitemap) issues.push('sitemap.xml missing')
+    if (broken > 0) issues.push(`${broken} broken link(s) on homepage`)
     const miss = ['hsts', 'xcto', 'xfo'].filter(k => !security[k]); if (miss.length) issues.push(`Security headers missing: ${miss.join(', ')}`)
   }
   if (wp.updates_core) issues.push('WordPress core update pending')
   if (wp.updates_plugins > 0) issues.push(`${wp.updates_plugins} plugin update(s) pending`)
   if (wp.updates_themes > 0) issues.push(`${wp.updates_themes} theme update(s) pending`)
   if (wp.autoload_kb > 1500) issues.push(`Autoload bloat: ${wp.autoload_kb}KB`)
-  if (wp.error_log_kb > 1024) issues.push('PHP error log moto che')
-  if (wp.php_version && parseFloat(wp.php_version) < 8.1) issues.push(`PHP ${wp.php_version} junu che`)
-  if (wp.wp_debug) issues.push('WP_DEBUG chalu che (production ma band rakho)')
-  if (wp.admin_user) issues.push('"admin" username exist kare che')
-  if (wp.xmlrpc) issues.push('XML-RPC chalu che')
-  if (wp.inactive_plugins > 0) issues.push(`${wp.inactive_plugins} inactive plugin(s) delete karo`)
+  if (wp.error_log_kb > 1024) issues.push('PHP error log is large')
+  if (wp.php_version && parseFloat(wp.php_version) < 8.1) issues.push(`PHP ${wp.php_version} is outdated`)
+  if (wp.wp_debug) issues.push('WP_DEBUG is on (turn off in production)')
+  if (wp.admin_user) issues.push('Username "admin" exists')
+  if (wp.xmlrpc) issues.push('XML-RPC is enabled')
+  if (wp.inactive_plugins > 0) issues.push(`${wp.inactive_plugins} inactive plugin(s), delete them`)
   return { site_id: site.id, up, status_code: status, response_ms: ms, ttfb_ms: ttfb, ssl_expires: ssl, domain_expires: dom,
     perf_score: p.perf ?? null, lcp_s: p.lcp ?? null, cls: p.cls ?? null, tbt_ms: p.tbt ?? null,
     wp_version: wp.wp_version ?? null, php_version: wp.php_version ?? null,
