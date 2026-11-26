@@ -6,15 +6,16 @@ const lvl = c => !c ? 'none' : !c.up ? 'bad' : c.issues?.length ? 'mid' : 'good'
 const days = d => d ? Math.round((new Date(d) - Date.now()) / 864e5) : null
 const dc = d => d == null ? '' : d < 14 ? 'bd' : d < 30 ? 'warn' : 'ok'
 const Y = ({ t, v }) => <div className="row"><span>{t}</span><b className={v ? 'ok' : 'bd'}>{v ? '✓' : '✗'}</b></div>
-const Box = ({ t, cls = '', children }) => <div className={`card ${cls}`}><h4>{t}</h4>{children}</div>
+const IC = { Speed: '⚡', 'Uptime, SSL and domain': '🔒', WordPress: '🧩', SEO: '🔎', Security: '🛡️' }
+const Box = ({ t, cls = '', children }) => <div className={`card ${cls}`}><h4>{IC[t] || '⚠️'} {t}</h4>{children}</div>
 
 function Login() {
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [err, setErr] = useState('')
   const go = async e => { e.preventDefault(); const { error } = await supabase.auth.signInWithPassword({ email, password }); if (error) setErr(error.message) }
-  return <form onSubmit={go} className="login"><h2>WP Dashboard</h2>
+  return <div className="loginwrap"><form onSubmit={go} className="login"><div className="logo">🌐</div><h2>WP Dashboard</h2><p className="muted">Monitor all your websites in one place</p>
     <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
     <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
-    <button>Login</button>{err && <p className="bd">{err}</p>}</form>
+    <button>Login</button>{err && <p className="bd">{err}</p>}</form></div>
 }
 
 function Detail({ site, onBack, reload }) {
@@ -85,9 +86,8 @@ function Dashboard() {
   const list = sites.filter(x => (x.name + x.url).toLowerCase().includes(q.toLowerCase())).sort((a, b) => rank[lvl(last[a.id])] - rank[lvl(last[b.id])])
   const n = k => sites.filter(x => lvl(last[x.id]) === k).length
   return <>
-    <div className="top"><h1>Websites</h1><div><button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
-    <div className="sum"><div><b>{sites.length}</b><span className="muted">Total</span></div><div><b className="ok">{n('good')}</b><span className="muted">Healthy</span></div>
-      <div><b className="warn">{n('mid')}</b><span className="muted">Issues</span></div><div><b className="bd">{n('bad')}</b><span className="muted">Down</span></div></div>
+    <div className="top"><h1><span className="logo sm">🌐</span> Websites</h1><div><button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
+    <div className="sum"><div className="t ac"><b>{sites.length}</b><span>Total sites</span></div><div className="t gd"><b>{n('good')}</b><span>Healthy</span></div><div className="t md"><b>{n('mid')}</b><span>Need attention</span></div><div className="t bd"><b>{n('bad')}</b><span>Down</span></div></div>
     {showAdd && <form className="add" onSubmit={add}>
       <input placeholder="Name" required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
       <input placeholder="https://site.com" required value={f.url} onChange={e => setF({ ...f, url: e.target.value })} />
@@ -96,7 +96,7 @@ function Dashboard() {
     {!sites.length && <p className="muted">No sites yet. Click '+ Add site' above.</p>}
     <div className="grid">{list.map(x => { const c = last[x.id], L = lvl(c), k = c?.issues?.length ?? 0
       return <div key={x.id} className={`card click ${L}`} onClick={() => setSel(x)}>
-        <div className="top"><b>{x.name}</b><span className={`pill ${!c ? 'ac' : c.up ? 'good' : 'bad'}`}>{!c ? 'No data' : c.up ? '● Up' : '● Down'}</span></div>
+        <div className="top"><span className="nm"><span className="av">{(x.name || "?")[0].toUpperCase()}</span><b>{x.name}</b></span><span className={`pill ${!c ? 'ac' : c.up ? 'good' : 'bad'}`}>{!c ? 'No data' : c.up ? '● Up' : '● Down'}</span></div>
         <div className="muted">{x.url}</div>
         {c && <><div className="row"><span>PageSpeed</span><span className={`pill ${sc(c.perf_score)}`}>{c.perf_score ?? '-'}</span></div>
           <div className="row"><span>Response</span><span className={c.response_ms > 2500 ? 'bd' : ''}>{c.response_ms}ms</span></div>
@@ -113,5 +113,5 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
   if (session === undefined) return null
-  return <main>{session ? <Dashboard /> : <Login />}</main>
+  return session ? <main><Dashboard /></main> : <Login />
 }
