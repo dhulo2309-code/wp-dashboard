@@ -69,7 +69,7 @@ function Detail({ site, onBack, reload }) {
     {c && <div className="grid" style={{ marginTop: 16 }}>
       <Box t={`Issues (${c.issues.length})`} cls={c.issues.length ? 'mid' : 'good'}>
         {c.issues.length ? c.issues.map(i => { const f = fixFor(i), o = open === i; return <div key={i}>
-          <div className="iss" style={{ cursor: 'pointer' }} onClick={() => setOpen(o ? null : i)}>⚠ {i} <b style={{ float: 'right' }}>{o ? '▲' : 'How to fix ▼'}</b></div>
+          <div className="iss" style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }} onClick={() => setOpen(o ? null : i)}><span>⚠ {i}</span><b style={{ whiteSpace: 'nowrap' }}>{o ? 'Hide ▲' : 'How to fix ▼'}</b></div>
           {o && <div style={{ background: 'var(--card)', border: '1px solid var(--mdbd)', borderRadius: 8, padding: '10px 14px', margin: '4px 0 8px', fontSize: 13, color: 'var(--tx)' }}>
             <b>{f.title}</b>
             <ol style={{ paddingLeft: 18, margin: '8px 0' }}>{f.steps.map(x => <li key={x} style={{ marginBottom: 4 }}>{x}</li>)}</ol>
