@@ -43,7 +43,7 @@ function Detail({ site, onBack, reload }) {
         <div className="row"><span>TBT</span><span className={c.tbt_ms > 600 ? 'bd' : c.tbt_ms > 200 ? 'warn' : 'ok'}>{c.tbt_ms != null ? Math.round(c.tbt_ms) + 'ms' : '-'}</span></div>
         <div className="row"><span>TTFB</span><span className={c.ttfb_ms > 800 ? 'warn' : 'ok'}>{c.ttfb_ms}ms</span></div>
         <div className="row"><span>Response</span><span className={c.response_ms > 2500 ? 'bd' : 'ok'}>{c.response_ms}ms</span></div></Box>
-      <Box t="Uptime, SSL ane domain">
+      <Box t="Uptime, SSL and domain">
         <div className="row"><span>HTTP status</span><span className={c.up ? 'ok' : 'bd'}>{c.status_code}</span></div>
         <div className="row"><span>SSL expires</span><span className={dc(days(c.ssl_expires))}>{c.ssl_expires ? `${c.ssl_expires.slice(0, 10)} (${days(c.ssl_expires)}d)` : '-'}</span></div>
         <div className="row"><span>Domain expires</span><span className={dc(days(c.domain_expires))}>{c.domain_expires ? `${c.domain_expires.slice(0, 10)} (${days(c.domain_expires)}d)` : '-'}</span></div>
@@ -55,15 +55,15 @@ function Detail({ site, onBack, reload }) {
         <div className="row"><span>DB size</span><span>{c.db_size_mb}MB</span></div>
         <div className="row"><span>Autoload</span><span className={c.autoload_kb > 1500 ? 'warn' : 'ok'}>{c.autoload_kb}KB</span></div>
         <div className="row"><span>Revisions</span><span>{w.revisions}</span></div>
-        <div className="row"><span>Inactive plugins</span><span className={w.inactive_plugins ? 'warn' : 'ok'}>{w.inactive_plugins}</span></div></> : <p className="muted">WP key nathi. Plugin install karo to aa data aavse.</p>}</Box>
+        <div className="row"><span>Inactive plugins</span><span className={w.inactive_plugins ? 'warn' : 'ok'}>{w.inactive_plugins}</span></div></> : <p className="muted">No WP key set. Install the connector plugin to see this data.</p>}</Box>
       <Box t="SEO">
-        <Y t="Title tag" v={seo.title} /><Y t="Meta description" v={seo.desc} /><Y t="Ek H1" v={seo.h1 === 1} /><Y t="Indexable (noindex nathi)" v={!seo.noindex} />
+        <Y t="Title tag" v={seo.title} /><Y t="Meta description" v={seo.desc} /><Y t="Single H1" v={seo.h1 === 1} /><Y t="Indexable (no noindex tag)" v={!seo.noindex} />
         <Y t="robots.txt" v={seo.robots} /><Y t="sitemap.xml" v={seo.sitemap} /><Y t="Mobile viewport" v={seo.viewport} /><Y t="Canonical" v={seo.canonical} /></Box>
       <Box t="Security">
         <Y t="HTTPS" v={sec.https} /><Y t="HSTS" v={sec.hsts} /><Y t="X-Content-Type-Options" v={sec.xcto} /><Y t="Clickjacking protection" v={sec.xfo} /><Y t="CSP" v={sec.csp} />
-        {c.wp_version && <><Y t={'"admin" user nathi'} v={!w.admin_user} /><Y t="XML-RPC band" v={!w.xmlrpc} /><Y t="WP_DEBUG band" v={!w.wp_debug} /></>}</Box>
+        {c.wp_version && <><Y t={'No "admin" username'} v={!w.admin_user} /><Y t="XML-RPC disabled" v={!w.xmlrpc} /><Y t="WP_DEBUG off" v={!w.wp_debug} /></>}</Box>
       <Box t={`Issues (${c.issues.length})`} cls={c.issues.length ? 'mid' : 'good'}>
-        {c.issues.length ? c.issues.map(i => <div key={i} className="iss">⚠ {i}</div>) : <div className="ok">Badhu barabar che ✓</div>}</Box>
+        {c.issues.length ? c.issues.map(i => <div key={i} className="iss">⚠ {i}</div>) : <div className="ok">All good ✓</div>}</Box>
     </div>}
     <h3>History</h3><div className="card scroll"><table><thead><tr><th>Time</th><th>Status</th><th>Response</th><th>Score</th><th>Issues</th></tr></thead><tbody>
       {rows.map(r => <tr key={r.id}><td>{new Date(r.checked_at).toLocaleString()}</td><td><span className={`pill ${r.up ? 'good' : 'bad'}`}>{r.up ? 'Up' : 'Down'}</span></td><td>{r.response_ms}ms</td><td><span className={`pill ${sc(r.perf_score)}`}>{r.perf_score ?? '-'}</span></td><td>{r.issues.length}</td></tr>)}</tbody></table></div>
@@ -93,7 +93,7 @@ function Dashboard() {
       <input placeholder="https://site.com" required value={f.url} onChange={e => setF({ ...f, url: e.target.value })} />
       <input placeholder="WP connector key (optional)" value={f.wp_key} onChange={e => setF({ ...f, wp_key: e.target.value })} /><button>Save site</button></form>}
     <input placeholder="Search sites…" value={q} onChange={e => setQ(e.target.value)} style={{ margin: '4px 0 14px', width: 260 }} />
-    {!sites.length && <p className="muted">Hajū koi site nathi. Upar '+ Add site' dabavo.</p>}
+    {!sites.length && <p className="muted">No sites yet. Click '+ Add site' above.</p>}
     <div className="grid">{list.map(x => { const c = last[x.id], L = lvl(c), k = c?.issues?.length ?? 0
       return <div key={x.id} className={`card click ${L}`} onClick={() => setSel(x)}>
         <div className="top"><b>{x.name}</b><span className={`pill ${!c ? 'ac' : c.up ? 'good' : 'bad'}`}>{!c ? 'No data' : c.up ? '● Up' : '● Down'}</span></div>
