@@ -72,7 +72,7 @@ function Detail({ site, onBack, reload }) {
 }
 
 function Dashboard() {
-  const [sites, setSites] = useState([]), [last, setLast] = useState({}), [sel, setSel] = useState(null), [showAdd, setShowAdd] = useState(false)
+  const [sites, setSites] = useState([]), [last, setLast] = useState({}), [sel, setSel] = useState(null), [showAdd, setShowAdd] = useState(false), [prog, setProg] = useState(null)
   const [f, setF] = useState({ name: '', url: '', wp_key: '' }), [q, setQ] = useState('')
   const load = useCallback(async () => {
     const { data: s } = await supabase.from('sites').select('*').order('name')
@@ -81,13 +81,21 @@ function Dashboard() {
   }, [])
   useEffect(() => { load(); const ch = supabase.channel('all').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checks' }, load).subscribe(); return () => supabase.removeChannel(ch) }, [load])
   const add = async e => { e.preventDefault(); await supabase.from('sites').insert({ name: f.name, url: f.url.replace(/\/$/, ''), wp_key: f.wp_key || null }); setF({ name: '', url: '', wp_key: '' }); setShowAdd(false); load() }
+  const checkAll = async () => {
+    const queue = sites.map(x => x.id), total = queue.length; let done = 0
+    setProg({ done: 0, total })
+    const worker = async () => { while (queue.length) { const id = queue.shift(); try { await api('check', { site_id: id }) } catch {} done++; setProg({ done, total }) } }
+    await Promise.all([worker(), worker(), worker()])
+    setProg(null); load()
+  }
   if (sel) return <Detail site={sel} onBack={() => setSel(null)} reload={load} />
   const rank = { bad: 0, mid: 1, good: 2, none: 3 }
   const list = sites.filter(x => (x.name + x.url).toLowerCase().includes(q.toLowerCase())).sort((a, b) => rank[lvl(last[a.id])] - rank[lvl(last[b.id])])
   const n = k => sites.filter(x => lvl(last[x.id]) === k).length
   return <>
-    <div className="top"><h1><span className="logo sm">🌐</span> Websites</h1><div><button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
+    <div className="top" style={{ flexWrap: 'wrap' }}><h1><span className="logo sm">🌐</span> Websites</h1><div><button disabled={!!prog || !sites.length} onClick={checkAll}>{prog ? `Checking ${prog.done}/${prog.total}…` : '↻ Check all sites'}</button>{' '}<button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
     <div className="sum"><div className="t ac"><b>{sites.length}</b><span>Total sites</span></div><div className="t gd"><b>{n('good')}</b><span>Healthy</span></div><div className="t md"><b>{n('mid')}</b><span>Need attention</span></div><div className="t bd"><b>{n('bad')}</b><span>Down</span></div></div>
+    {prog && <div style={{ height: 6, borderRadius: 6, background: 'var(--line)', margin: '0 0 14px', overflow: 'hidden' }}><div style={{ height: '100%', width: `${(prog.done / prog.total) * 100}%`, background: 'linear-gradient(90deg,var(--ac),var(--ac2))', transition: '.3s' }} /></div>}
     {showAdd && <form className="add" onSubmit={add}>
       <input placeholder="Name" required value={f.name} onChange={e => setF({ ...f, name: e.target.value })} />
       <input placeholder="https://site.com" required value={f.url} onChange={e => setF({ ...f, url: e.target.value })} />
