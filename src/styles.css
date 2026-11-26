@@ -1,0 +1,23 @@
+:root{--bg:#0f1115;--card:#181b22;--line:#262b36;--tx:#e6e8ee;--mu:#8b93a7;--ac:#4b6bfb;--gd:#3ecf8e;--md:#f5a623;--bd:#ff5c5c}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);margin:0}
+main{max-width:1150px;margin:0 auto;padding:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card.good{border-color:#1f6b4a}.card.mid{border-color:#8a5d12}.card.bad{border-color:#8f2e2e}
+.click{cursor:pointer}.click:hover{border-color:var(--ac)}
+a{cursor:pointer}
+.ok{color:var(--gd)}.warn{color:var(--md)}.bd{color:var(--bd)}.muted{color:var(--mu);font-size:13px}
+.pill{font-size:12px;padding:2px 10px;border-radius:20px;font-weight:500}
+.pill.good{background:#12372a;color:var(--gd)}.pill.mid{background:#3b2c0d;color:var(--md)}.pill.bad{background:#40181a;color:var(--bd)}.pill.ac{background:#1b2650;color:#8fa6ff}
+.row{display:flex;justify-content:space-between;align-items:center;margin:7px 0;font-size:14px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}.sum b{display:block;font-size:24px;font-weight:600}
+input,button{background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+button{cursor:pointer;background:var(--ac);border:0}button.g{background:var(--line)}button.d{background:#40181a;color:var(--bd)}button:disabled{opacity:.5}
+form.add{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.login{max-width:320px;margin:15vh auto;display:flex;flex-direction:column;gap:10px}
+h4{margin:0 0 6px;font-size:14px}
+.iss{background:#3b2c0d;color:var(--md);border-radius:8px;padding:6px 10px;margin-top:6px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.scroll{overflow-x:auto}
