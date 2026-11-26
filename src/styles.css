@@ -1,23 +1,27 @@
-:root{--bg:#0f1115;--card:#181b22;--line:#262b36;--tx:#e6e8ee;--mu:#8b93a7;--ac:#4b6bfb;--gd:#3ecf8e;--md:#f5a623;--bd:#ff5c5c}
+:root{--bg:#f4f6fb;--card:#fff;--line:#e2e7f0;--tx:#1c2333;--mu:#6b7488;--ac:#4b6bfb;--acbg:#e8edff;--actx:#3550d6;
+--gd:#138a5b;--gdbg:#e1f5ec;--gdbd:#9fdcbf;--md:#a86200;--mdbg:#fff1da;--mdbd:#f2c882;--bd:#c92a2a;--bdbg:#fde8e8;--bdbd:#f0a3a3;--gbtn:#e8ecf3}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#181b22;--line:#262b36;--tx:#e6e8ee;--mu:#8b93a7;--acbg:#1b2650;--actx:#8fa6ff;
+--gd:#3ecf8e;--gdbg:#12372a;--gdbd:#1f6b4a;--md:#f5a623;--mdbg:#3b2c0d;--mdbd:#8a5d12;--bd:#ff5c5c;--bdbg:#40181a;--bdbd:#8f2e2e;--gbtn:#262b36}}
 body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);margin:0}
 main{max-width:1150px;margin:0 auto;padding:24px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-.card.good{border-color:#1f6b4a}.card.mid{border-color:#8a5d12}.card.bad{border-color:#8f2e2e}
-.click{cursor:pointer}.click:hover{border-color:var(--ac)}
-a{cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(20,30,60,.05)}
+.card.good{border-color:var(--gdbd)}.card.mid{border-color:var(--mdbd)}.card.bad{border-color:var(--bdbd)}
+.click{cursor:pointer}.click:hover{border-color:var(--ac);box-shadow:0 4px 14px rgba(75,107,251,.18)}
+a{cursor:pointer;color:var(--actx)}
 .ok{color:var(--gd)}.warn{color:var(--md)}.bd{color:var(--bd)}.muted{color:var(--mu);font-size:13px}
-.pill{font-size:12px;padding:2px 10px;border-radius:20px;font-weight:500}
-.pill.good{background:#12372a;color:var(--gd)}.pill.mid{background:#3b2c0d;color:var(--md)}.pill.bad{background:#40181a;color:var(--bd)}.pill.ac{background:#1b2650;color:#8fa6ff}
+.pill{font-size:12px;padding:2px 10px;border-radius:20px;font-weight:600}
+.pill.good{background:var(--gdbg);color:var(--gd)}.pill.mid{background:var(--mdbg);color:var(--md)}.pill.bad{background:var(--bdbg);color:var(--bd)}.pill.ac,.pill.mu{background:var(--acbg);color:var(--actx)}
 .row{display:flex;justify-content:space-between;align-items:center;margin:7px 0;font-size:14px}
 .top{display:flex;justify-content:space-between;align-items:center}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
-.sum div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}.sum b{display:block;font-size:24px;font-weight:600}
-input,button{background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-button{cursor:pointer;background:var(--ac);border:0}button.g{background:var(--line)}button.d{background:#40181a;color:var(--bd)}button:disabled{opacity:.5}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}.sum b{display:block;font-size:24px;font-weight:700}
+input,button{font:inherit;font-size:14px;border-radius:8px;padding:8px 12px}
+input{background:var(--card);color:var(--tx);border:1px solid var(--line)}
+button{cursor:pointer;background:var(--ac);color:#fff;border:0;font-weight:500}button.g{background:var(--gbtn);color:var(--tx)}button.d{background:var(--bdbg);color:var(--bd)}button:disabled{opacity:.5}
 form.add{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-.login{max-width:320px;margin:15vh auto;display:flex;flex-direction:column;gap:10px}
+.login{max-width:320px;margin:15vh auto;display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
 h4{margin:0 0 6px;font-size:14px}
-.iss{background:#3b2c0d;color:var(--md);border-radius:8px;padding:6px 10px;margin-top:6px;font-size:13px}
+.iss{background:var(--mdbg);color:var(--md);border-radius:8px;padding:6px 10px;margin-top:6px;font-size:13px}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
 .scroll{overflow-x:auto}
