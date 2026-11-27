@@ -81,7 +81,7 @@ function Detail({ site, onBack, reload }) {
   }, [site.id])
   useEffect(() => { load(); const ch = supabase.channel('d' + site.id).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checks', filter: `site_id=eq.${site.id}` }, load).subscribe(); return () => supabase.removeChannel(ch) }, [load])
   const run = async (key, path, body) => { setBusy(key); await api(path, { site_id: site.id, ...body }); setBusy('') }
-  const remove = async () => { if (confirm('Delete this site?')) { await supabase.from('sites').delete().eq('id', site.id); reload(); onBack() } }
+  const remove = async () => { if (confirm('Delete this site?')) { await api('sites', { op: 'delete', id: site.id }); reload(); onBack() } }
   const c = rows[0], seo = c?.seo || {}, sec = c?.security || {}, w = c?.wp_extra || {}, L = lvl(c)
   return <>
     <a className="muted" onClick={onBack}>← Back</a>
@@ -138,8 +138,41 @@ function Detail({ site, onBack, reload }) {
   </>
 }
 
+function MFA({ onDone }) {
+  const [mode, setMode] = useState(null), [qr, setQr] = useState(''), [secret, setSecret] = useState(''), [fid, setFid] = useState(''), [code, setCode] = useState(''), [err, setErr] = useState('')
+  useEffect(() => { (async () => {
+    const { data: f } = await supabase.auth.mfa.listFactors()
+    const ok = f?.totp?.[0]
+    if (ok) { setFid(ok.id); setMode('verify'); return }
+    for (const x of (f?.all || []).filter(x => x.status === 'unverified')) await supabase.auth.mfa.unenroll({ factorId: x.id })
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'WP Dashboard' })
+    if (error) return setErr(error.message)
+    setFid(data.id); setQr(data.totp.qr_code); setSecret(data.totp.secret); setMode('enroll')
+  })() }, [])
+  const go = async e => { e.preventDefault(); setErr(''); const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: fid, code: code.trim() }); if (error) setErr(error.message); else onDone() }
+  return <div className="loginwrap"><form onSubmit={go} className="login"><div className="logo">🔐</div>
+    <h2>{mode === 'enroll' ? 'Set up 2-step login' : '2-step verification'}</h2>
+    {mode === 'enroll' && <><p className="muted">Scan this QR code with Google Authenticator (or any authenticator app), then type the 6-digit code.</p>
+      <img src={qr} alt="QR code" style={{ width: 180, margin: '0 auto', background: '#fff', borderRadius: 8 }} />
+      <p className="muted" style={{ wordBreak: 'break-all' }}>Or enter this key manually: {secret}</p></>}
+    {mode === 'verify' && <p className="muted">Open your authenticator app and enter the 6-digit code.</p>}
+    {!mode && !err && <p className="muted">Loading…</p>}
+    {mode && <><input inputMode="numeric" maxLength={6} placeholder="123456" value={code} onChange={e => setCode(e.target.value)} /><button>Verify</button></>}
+    {err && <p className="bd">{err}</p>}
+    <button type="button" className="g" onClick={() => supabase.auth.signOut()}>Logout</button></form></div>
+}
+
+function Activity({ onBack }) {
+  const [rows, setRows] = useState([])
+  useEffect(() => { supabase.from('activity_log').select('*').order('at', { ascending: false }).limit(50).then(({ data }) => setRows(data || [])) }, [])
+  return <><a className="muted" onClick={onBack}>← Back</a><h1>Activity log</h1>
+    <div className="card scroll"><table><thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead><tbody>
+      {rows.map(r => <tr key={r.id}><td>{new Date(r.at).toLocaleString()}</td><td>{r.user_email}</td><td>{r.action}</td><td>{r.detail}</td></tr>)}</tbody></table></div>
+    <p className="muted">Failed logins are in Supabase: Authentication &gt; Logs.</p></>
+}
+
 function Dashboard() {
-  const [sites, setSites] = useState([]), [last, setLast] = useState({}), [sel, setSel] = useState(null), [showAdd, setShowAdd] = useState(false), [prog, setProg] = useState(null)
+  const [sites, setSites] = useState([]), [last, setLast] = useState({}), [sel, setSel] = useState(null), [showAdd, setShowAdd] = useState(false), [prog, setProg] = useState(null), [view, setView] = useState(null)
   const [f, setF] = useState({ name: '', url: '', wp_key: '' }), [q, setQ] = useState('')
   const load = useCallback(async () => {
     const { data: s } = await supabase.from('sites').select('*').order('name')
@@ -147,7 +180,7 @@ function Dashboard() {
     setSites(s || []); setLast(Object.fromEntries((l || []).map(x => [x.site_id, x])))
   }, [])
   useEffect(() => { load(); const ch = supabase.channel('all').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checks' }, load).subscribe(); return () => supabase.removeChannel(ch) }, [load])
-  const add = async e => { e.preventDefault(); await supabase.from('sites').insert({ name: f.name, url: f.url.replace(/\/$/, ''), wp_key: f.wp_key || null }); setF({ name: '', url: '', wp_key: '' }); setShowAdd(false); load() }
+  const add = async e => { e.preventDefault(); const r = await api('sites', { op: 'add', name: f.name, url: f.url, wp_key: f.wp_key }); if (!r.ok) return alert(await r.text()); setF({ name: '', url: '', wp_key: '' }); setShowAdd(false); load() }
   const checkAll = async () => {
     const queue = sites.map(x => x.id), total = queue.length; let done = 0
     setProg({ done: 0, total })
@@ -155,12 +188,13 @@ function Dashboard() {
     await Promise.all([worker(), worker(), worker()])
     setProg(null); load()
   }
+  if (view) return <Activity onBack={() => setView(null)} />
   if (sel) return <Detail site={sel} onBack={() => setSel(null)} reload={load} />
   const rank = { bad: 0, mid: 1, good: 2, none: 3 }
   const list = sites.filter(x => (x.name + x.url).toLowerCase().includes(q.toLowerCase())).sort((a, b) => rank[lvl(last[a.id])] - rank[lvl(last[b.id])])
   const n = k => sites.filter(x => lvl(last[x.id]) === k).length
   return <>
-    <div className="top" style={{ flexWrap: 'wrap' }}><h1><span className="logo sm">🌐</span> Websites</h1><div><button disabled={!!prog || !sites.length} onClick={checkAll}>{prog ? `Checking ${prog.done}/${prog.total}…` : '↻ Check all sites'}</button>{' '}<button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
+    <div className="top" style={{ flexWrap: 'wrap' }}><h1><span className="logo sm">🌐</span> Websites</h1><div><button disabled={!!prog || !sites.length} onClick={checkAll}>{prog ? `Checking ${prog.done}/${prog.total}…` : '↻ Check all sites'}</button>{' '}<button onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Add site'}</button>{' '}<button className="g" onClick={() => setView('activity')}>Activity</button>{' '}<button className="g" onClick={() => supabase.auth.signOut()}>Logout</button></div></div>
     <div className="sum"><div className="t ac"><b>{sites.length}</b><span>Total sites</span></div><div className="t gd"><b>{n('good')}</b><span>Healthy</span></div><div className="t md"><b>{n('mid')}</b><span>Need attention</span></div><div className="t bd"><b>{n('bad')}</b><span>Down</span></div></div>
     {prog && <div style={{ height: 6, borderRadius: 6, background: 'var(--line)', margin: '0 0 14px', overflow: 'hidden' }}><div style={{ height: '100%', width: `${(prog.done / prog.total) * 100}%`, background: 'linear-gradient(90deg,var(--ac),var(--ac2))', transition: '.3s' }} /></div>}
     {showAdd && <form className="add" onSubmit={add}>
@@ -181,12 +215,17 @@ function Dashboard() {
 }
 
 export default function App() {
-  const [session, setSession] = useState(undefined)
+  const [session, setSession] = useState(undefined), [aal, setAal] = useState(null)
+  const refreshAal = async () => { const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(); setAal(data?.currentLevel || 'aal1') }
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => subscription.unsubscribe()
   }, [])
+  useEffect(() => { if (session) refreshAal(); else setAal(null) }, [session?.user?.id])
   if (session === undefined) return null
-  return session ? <main><Dashboard /></main> : <Login />
+  if (!session) return <Login />
+  if (aal === null) return null
+  if (aal !== 'aal2') return <MFA onDone={refreshAal} />
+  return <main><Dashboard /></main>
 }
