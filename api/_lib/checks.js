@@ -19,8 +19,9 @@ const brokenLinks = async (html, base) => {
     try { const u = new URL(m[1], base); if (u.origin === o && !/\.(jpe?g|png|gif|webp|svg|pdf|zip|css|js)$/i.test(u.pathname)) set.add(u.href) } catch {}
     if (set.size >= 15) break
   }
-  const r = await Promise.all([...set].map(async u => { try { const x = await fetch(u, { method: 'HEAD', signal: AbortSignal.timeout(8000) }); return x.status === 404 || x.status === 410 || x.status >= 500 } catch { return false } }))
-  return r.filter(Boolean).length
+  const urls = [...set]
+  const r = await Promise.all(urls.map(async u => { try { const x = await fetch(u, { method: 'HEAD', signal: AbortSignal.timeout(8000) }); return x.status === 404 || x.status === 410 || x.status >= 500 } catch { return false } }))
+  return urls.filter((_, i) => r[i])
 }
 const psi = async base => {
   try {
@@ -38,7 +39,7 @@ export async function checkSite(site) {
   const [ssl, p, wp, robots, sitemap, broken, dom] = await Promise.all([
     sslExpiry(host), psi(base),
     site.wp_key ? fetch(`${base}/wp-json/wpdash/v1/status`, { headers: { 'x-wpdash-key': site.wp_key }, signal: AbortSignal.timeout(15000) }).then(r => r.json()).catch(() => { issues.push('WP connector not reachable'); return {} }) : {},
-    ok(`${base}/robots.txt`), ok(`${base}/sitemap.xml`), up ? brokenLinks(html, base) : 0, domExpiry(host)])
+    ok(`${base}/robots.txt`), ok(`${base}/sitemap.xml`), up ? brokenLinks(html, base) : [], domExpiry(host)])
   const seo = { title: (html.match(/<title[^>]*>([^<]*)/i) || [])[1]?.trim() || null, desc: /<meta[^>]+name=["']description["']/i.test(html),
     h1: (html.match(/<h1[\s>]/gi) || []).length, noindex: /<meta[^>]+name=["']robots["'][^>]*noindex/i.test(html),
     viewport: /<meta[^>]+name=["']viewport["']/i.test(html), canonical: /<link[^>]+rel=["']canonical["']/i.test(html), robots, sitemap }
@@ -57,7 +58,7 @@ export async function checkSite(site) {
     if (!seo.desc) issues.push('SEO: missing meta description')
     if (seo.h1 !== 1) issues.push(`SEO: ${seo.h1} H1 tags (should be 1)`)
     if (!robots) issues.push('robots.txt missing'); if (!sitemap) issues.push('sitemap.xml missing')
-    if (broken > 0) issues.push(`${broken} broken link(s) on homepage`)
+    if (broken.length > 0) issues.push(`${broken.length} broken link(s) on homepage`)
     const miss = ['hsts', 'xcto', 'xfo'].filter(k => !security[k]); if (miss.length) issues.push(`Security headers missing: ${miss.join(', ')}`)
   }
   if (wp.updates_core) issues.push('WordPress core update pending')
@@ -74,5 +75,5 @@ export async function checkSite(site) {
     perf_score: p.perf ?? null, lcp_s: p.lcp ?? null, cls: p.cls ?? null, tbt_ms: p.tbt ?? null,
     wp_version: wp.wp_version ?? null, php_version: wp.php_version ?? null,
     updates_core: wp.updates_core ?? null, updates_plugins: wp.updates_plugins ?? null, updates_themes: wp.updates_themes ?? null,
-    db_size_mb: wp.db_size_mb ?? null, autoload_kb: wp.autoload_kb ?? null, broken_links: broken, seo, security, wp_extra: wp, issues }
+    db_size_mb: wp.db_size_mb ?? null, autoload_kb: wp.autoload_kb ?? null, broken_links: broken.length, seo: { ...seo, broken_urls: broken }, security, wp_extra: wp, issues }
 }
