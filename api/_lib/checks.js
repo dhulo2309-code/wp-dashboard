@@ -1,4 +1,5 @@
 import tls from 'node:tls'
+import { dec } from './crypto.js'
 const sslExpiry = host => new Promise(res => {
   const s = tls.connect(443, host, { servername: host }, () => {
     const c = s.getPeerCertificate(); s.end(); res(c.valid_to ? new Date(c.valid_to).toISOString() : null)
@@ -33,12 +34,13 @@ const psi = async base => {
 }
 export async function checkSite(site) {
   const base = site.url.replace(/\/$/, ''), host = new URL(base).hostname, issues = []
+  const key = dec(site.wp_key)
   const t = Date.now(); let up = false, status = 0, html = '', h = new Headers(), ttfb = null
   try { const r = await fetch(base, { signal: AbortSignal.timeout(15000), headers: { 'user-agent': 'WPDash/1.0' } }); ttfb = Date.now() - t; status = r.status; up = r.ok; h = r.headers; html = await r.text() } catch {}
   const ms = Date.now() - t
   const [ssl, p, wp, robots, sitemap, broken, dom] = await Promise.all([
     sslExpiry(host), psi(base),
-    site.wp_key ? fetch(`${base}/wp-json/wpdash/v1/status`, { headers: { 'x-wpdash-key': site.wp_key }, signal: AbortSignal.timeout(15000) }).then(r => r.json()).catch(() => { issues.push('WP connector not reachable'); return {} }) : {},
+    key ? fetch(`${base}/wp-json/wpdash/v1/status`, { headers: { 'x-wpdash-key': key }, signal: AbortSignal.timeout(15000) }).then(r => r.json()).catch(() => { issues.push('WP connector not reachable'); return {} }) : {},
     ok(`${base}/robots.txt`), ok(`${base}/sitemap.xml`), up ? brokenLinks(html, base) : [], domExpiry(host)])
   const seo = { title: (html.match(/<title[^>]*>([^<]*)/i) || [])[1]?.trim() || null, desc: /<meta[^>]+name=["']description["']/i.test(html),
     h1: (html.match(/<h1[\s>]/gi) || []).length, noindex: /<meta[^>]+name=["']robots["'][^>]*noindex/i.test(html),
