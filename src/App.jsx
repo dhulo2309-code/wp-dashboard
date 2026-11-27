@@ -36,6 +36,31 @@ const FIX = [
   { t: /connector not reachable/, title: 'Dashboard cannot reach the WP connector', steps: ['Check that the wpdash connector plugin is active.', 'Check that the key in wp-config.php matches the key saved for this site.', 'Settings > Permalinks > Save to refresh REST routes.', 'If you use Wordfence, Cloudflare or a "disable REST API" plugin, allow /wp-json/wpdash/.'] },
 ]
 const fixFor = i => FIX.find(f => f.t.test(i)) || { title: 'Review this issue', steps: ['Open the related box below and check the red items.', 'Fix them, then click Check now.'] }
+const find = (l, re) => (l || []).filter(n => re.test(n))
+const whereFor = (i, site, c) => {
+  const w = c.wp_extra || {}, seo = c.seo || {}, act = w.active_plugins, o = []
+  const has = (re, none) => { if (!act) return; const f = find(act, re); o.push(f.length ? `Plugin found: ${f.join(', ')}` : none) }
+  const SEO = /yoast|rank math|all in one seo|seopress/i, CACHE = /rocket|litespeed|w3 total|super cache|autoptimize|wp fastest|sg optimizer|hummingbird|cache/i, SECP = /wordfence|sucuri|solid security|ithemes|headers/i
+  if (/SEO|noindex|H1/.test(i)) { o.push(`Page: ${site.url} (homepage)`); has(SEO, 'No SEO plugin detected. Install Yoast SEO or Rank Math.') }
+  else if (/robots\.txt|sitemap\.xml/.test(i)) { o.push(`File: ${site.url}/${/robots/.test(i) ? 'robots.txt' : 'sitemap.xml'}`); has(SEO, 'No SEO plugin detected.') }
+  else if (/broken link/.test(i)) (seo.broken_urls || []).forEach(u => o.push(`Broken page: ${u}`))
+  else if (/Slow response|TTFB|PageSpeed/.test(i)) { o.push(`Page tested: ${site.url}`); has(CACHE, 'No cache plugin detected.') }
+  else if (/Security headers/.test(i)) { o.push('Set on: your hosting, Cloudflare or a security plugin'); has(SECP, 'No security plugin detected.') }
+  else if (/plugin update/.test(i)) (w.plugins_outdated || []).forEach(p => o.push(`${p.name}: ${p.from} → ${p.to}`))
+  else if (/theme update/.test(i)) (w.themes_outdated || []).forEach(p => o.push(`Theme ${p.name}: ${p.from} → ${p.to}`))
+  else if (/core update/.test(i)) o.push(`WordPress ${w.wp_version} needs an update (Dashboard > Updates)`)
+  else if (/Autoload/.test(i)) (w.autoload_top || []).forEach(p => o.push(`Option ${p.name}: ${p.kb} KB (the name usually shows which plugin)`))
+  else if (/inactive plugin/.test(i)) (w.inactive_list || []).forEach(n => o.push(`Inactive: ${n}`))
+  else if (/Username "admin"/.test(i)) o.push('User "admin" (Users > All Users)')
+  else if (/XML-RPC/.test(i)) o.push(`Endpoint: ${site.url}/xmlrpc.php (WordPress core setting)`)
+  else if (/WP_DEBUG/.test(i)) o.push('File: wp-config.php')
+  else if (/error log/.test(i)) o.push('File: wp-content/debug.log')
+  else if (/outdated/.test(i)) o.push(`Current PHP version: ${c.php_version}`)
+  else if (/SSL expires/.test(i)) o.push(`Certificate for: ${new URL(site.url).hostname}`)
+  else if (/Domain expires/.test(i)) o.push(`Domain: ${new URL(site.url).hostname}`)
+  else if (/Site down/.test(i)) o.push(`URL: ${site.url} (HTTP ${c.status_code})`)
+  return o
+}
 const IC = { Speed: '⚡', 'Uptime, SSL and domain': '🔒', WordPress: '🧩', SEO: '🔎', Security: '🛡️' }
 const Box = ({ t, cls = '', children }) => <div id={'box-' + t.replace(/\W+/g, '')} className={`card ${cls}`}><h4>{IC[t] || '⚠️'} {t}</h4>{children}</div>
 
@@ -72,6 +97,7 @@ function Detail({ site, onBack, reload }) {
           <div className="iss" style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }} onClick={() => setOpen(o ? null : i)}><span>⚠ {i}</span><b style={{ whiteSpace: 'nowrap' }}>{o ? 'Hide ▲' : 'How to fix ▼'}</b></div>
           {o && <div style={{ background: 'var(--card)', border: '1px solid var(--mdbd)', borderRadius: 8, padding: '10px 14px', margin: '4px 0 8px', fontSize: 13, color: 'var(--tx)' }}>
             <b>{f.title}</b>
+            {(() => { const wl = whereFor(i, site, c); return wl.length > 0 && <div style={{ background: 'var(--acbg)', color: 'var(--actx)', borderRadius: 8, padding: '8px 12px', margin: '8px 0', fontSize: 13 }}><b>Where is the problem?</b>{wl.map((x, n) => <div key={n} style={{ marginTop: 3 }}>• {x}</div>)}</div> })()}
             <ol style={{ paddingLeft: 18, margin: '8px 0' }}>{f.steps.map(x => <li key={x} style={{ marginBottom: 4 }}>{x}</li>)}</ol>
             {f.code && <pre style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 8, padding: 10, overflowX: 'auto', fontSize: 12 }}>{f.code}</pre>}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
